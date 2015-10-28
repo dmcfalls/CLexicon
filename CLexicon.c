@@ -37,6 +37,7 @@ struct CLexiconImplementation {
 
             /*** local helper functions ***/
 
+
 /* Function: create_node
  * -----------------------
  * Creates a new LexNode, initializes all of its children pointers to NULL,
@@ -101,7 +102,33 @@ void clex_simple_add(CLexicon* lex, char* word_lower, int wordlen) {
     lex->wordcount++;
 }
 
+bool clex_contains_helper(CLexicon* lex, char* word, bool isPrefix) {
+    //Creates a lower-case copy of the word.
+    int wordlen = strlen(word);
+    char word_lower[wordlen+1];
+    for(int i = 0; i < wordlen; i++) {
+        word_lower[i] = tolower(word[i]);
+    }
+    word_lower[wordlen] = '\0';
+
+    //Traverses the tree from the root until it reaches the target node.
+    LexNode* curr_node = lex->root;
+    for(int i = 0; i < wordlen; i++) {
+        //If the tree ends before target node is reached, simply returns false.
+        if(curr_node == NULL) return false;
+        char ith = word_lower[i];
+        curr_node = curr_node->children[ith - 'a'];
+    }
+    if(curr_node == NULL) return false;
+
+    //Returns true if searching for a prefix, otherwise returns the node's is_word field.
+    if(isPrefix) return true;
+    return curr_node->is_word;
+}
+
+
             /*** client functions listed in the header file ***/
+
 
 /* Function: clex_create
  * ---------------------
@@ -193,25 +220,19 @@ void clex_clear(CLexicon* lex) {
  * is a member of the CLexicon.
  */ 
 bool clex_contains(CLexicon* lex, char* word) {
-    //Creates a lower-case copy of the word.
-    int wordlen = strlen(word);
-    char word_lower[wordlen+1];
-    for(int i = 0; i < wordlen; i++) {
-        word_lower[i] = tolower(word[i]);
-    }
-    word_lower[wordlen] = '\0';
+    //Calls the helper function with the "isPrefix" field set to false.
+    return clex_contains_helper(lex, word, false);
+}
 
-    //Traverses the tree from the root until it reaches the target node.
-    LexNode* curr_node = lex->root;
-    for(int i = 0; i < wordlen; i++) {
-        //If the tree ends before target node is reached, simply returns false.
-        if(curr_node == NULL) return false;
-        char ith = word_lower[i];
-        curr_node = curr_node->children[ith - 'a'];
-    }
-    
-    if(curr_node == NULL) return false;
-    return curr_node->is_word;
+/* Function: clex_contains_prefix
+ * ------------------------------
+ * Returns true if the lexicon contains any intermediate nodes corresponding to the given
+ * prefix, regardless of whether their is_word field is true. Returns false if a NULL node
+ * is reached while searching for the prefix.
+ */ 
+bool clex_contains_prefix(CLexicon* lex, char* prefix) {
+    //Calls the helper function with the "isPrefix" field set to true.
+    return clex_contains_helper(lex, prefix, true);
 }
 
 /* Function: clex_isEmpty
@@ -245,11 +266,9 @@ bool clex_remove(CLexicon* lex, char* word) {
     for(int i = 0; i < wordlen - 1; i++) {
         if(*curr_node == NULL) return false;
         char ith = word_lower[i];
-        //printf("remove: examining letter %c\n", ith);
         curr_node = &((*curr_node)->children[ith - 'a']);
     }
     LexNode** word_node = &(*curr_node)->children[word_lower[wordlen - 1] - 'a'];
-    //printf("remove: examining letter %c\n", word_lower[wordlen - 1]);
     if(*word_node == NULL) return false;
     (*word_node)->is_word = false;
     lex->wordcount--;

@@ -96,6 +96,14 @@ void clex_clear(CLexicon* lex);
 bool clex_contains(CLexicon* lex, char* word);
 
 
+/* Function: clex_contains_prefix
+ * ------------------------------
+ * Returns true if the given lexicon contains any words beginning with the given prefix, or
+ * false otherwise.
+ */ 
+bool clex_contains_prefix(CLexicon* lex, char* prefix);
+
+
 /* Function: clex_isEmpty
  * ----------------------
  * Returns true if the given CLexicon is empty, false otherwise.
