@@ -102,7 +102,7 @@ bool clex_scrub_tree(CLexicon* lex, LexNode** nodeptr) {
 
 /* Function: to_lower_case
  * -----------------------
- * Changes all letters in the word at address pointed to by wordptr to lower-case.
+ * Writes the string word_lower to hold an all lower-case version of word with length wordlen.
  */ 
 void to_lower_case(char word_lower[], int wordlen, char* word) {
     for(int i = 0; i < wordlen; i++) {
