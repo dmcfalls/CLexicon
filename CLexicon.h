@@ -121,6 +121,15 @@ bool clex_isEmpty(CLexicon* lex);
 bool clex_remove(CLexicon* lex, char* word);
 
 
+/* Function: clex_remove_prefix
+ * ----------------------------
+ * Removes all words beginning with the given prefix from the CLexicon, returning true if the prefix
+ * and all words beginning with the prefix were removed, false if the prefix was not found in the tree.
+ * Runs in quadratic time (scaling with the number of words with the prefix and their lengths).
+ */
+bool clex_remove_prefix(CLexicon* lex, char* prefix);
+
+
 /* Function: clex_word_count
  * -------------------------
  * Returns the number of elements currently stored in the CLexicon.

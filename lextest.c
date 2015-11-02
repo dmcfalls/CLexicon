@@ -38,10 +38,61 @@ void simple_test() {
     printf("contains 'hello'? (expect false) : %s\n", clex_contains(lex, "hello") ? "true" : "false");
     printf("contains 'apple'? (expect false) : %s\n", clex_contains(lex, "apple") ? "true" : "false");
     printf("contains 'pear'? (expect false) : %s\n", clex_contains(lex, "pear") ? "true" : "false");
+    printf("contains prefix 'app'? (expect false) : %s\n", clex_contains_prefix(lex, "app") ? "true" : "false");
+    printf("contains prefix ''? (expect false) : %s\n", clex_contains_prefix(lex, "") ? "true" : "false");
 
     clex_delete(lex);
     printf("\n");
 }
+
+void prefix_test() {
+    printf("---------- Running Prefix Test ----------\n");
+    
+    CLexicon* lex = clex_create();
+
+    printf("adding items to lexicon\n\n");
+
+    clex_add(lex, "reverse");
+    clex_add(lex, "return");
+    clex_add(lex, "read");
+    clex_add(lex, "apple");
+    clex_add(lex, "application");
+    clex_add(lex, "ripple");
+
+    printf("contains 'reverse'? (expect true) : %s\n", clex_contains(lex, "reverse") ? "true" : "false");
+    printf("contains 'read'? (expect true) : %s\n", clex_contains(lex, "return") ? "true" : "false");
+    printf("contains 'apple'? (expect true) : %s\n", clex_contains(lex, "apple") ? "true" : "false");
+    printf("contains 'application'? (expect true) : %s\n", clex_contains(lex, "application") ? "true" : "false");
+    printf("contains 'ripple'? (expect true) : %s\n\n", clex_contains(lex, "ripple") ? "true" : "false");
+
+    printf("lexicon has %d elements (expect 6)\n\n", clex_wordcount(lex));
+
+    printf("removing prefix 're' from lexicon\n\n");
+
+    clex_remove_prefix(lex, "re");
+    
+    printf("lexicon has %d elements (expect 3)\n\n", clex_wordcount(lex));
+
+    printf("contains 'reverse'? (expect false) : %s\n", clex_contains(lex, "reverse") ? "true" : "false");
+    printf("contains 'read'? (expect false) : %s\n", clex_contains(lex, "read") ? "true" : "false");
+    printf("contains 'ripple'? (expect true) : %s\n\n", clex_contains(lex, "ripple") ? "true" : "false");
+
+    printf("removing prefix 'appl' from lexicon\n\n");
+
+    clex_remove_prefix(lex, "appl");
+
+    printf("contains 'apple'? (expect false) : %s\n", clex_contains(lex, "apple") ? "true" : "false");
+    printf("contains 'application'? (expect false) : %s\n", clex_contains(lex, "application") ? "true" : "false");
+    printf("contains 'ripple'? (expect true) : %s\n\n", clex_contains(lex, "ripple") ? "true" : "false");
+    printf("contains prefix ''? (expect true) : %s\n", clex_contains_prefix(lex, "") ? "true" : "false");
+
+    printf("lexicon has %d elements (expect 1)\n\n", clex_wordcount(lex));
+
+    printf("deleting lexicon\n");
+    clex_delete(lex);
+    printf("\n");
+}
+
 
 void file_reading_test() {
     printf("---------- Running File Reading Test ----------\n");
@@ -76,6 +127,7 @@ void file_reading_test() {
 
 int main(int argc, char *argv[]) {
     simple_test();
+    prefix_test();
     file_reading_test();
     return 0;
 }

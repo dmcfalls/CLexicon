@@ -44,7 +44,7 @@ struct CLexiconImplementation {
  * and sets its word status to false. Returns a pointer.
  */ 
 LexNode* create_node() {
-    LexNode* node  = malloc(sizeof(LexNode*) + sizeof(LexNode));
+    LexNode* node  = malloc(sizeof(LexNode));
     for(int i = 0; i < ALPHA_SIZE; i++) {
         node->children[i] = NULL;
     }
@@ -55,14 +55,15 @@ LexNode* create_node() {
 /* Function: delete_node_helper
  * ----------------------------
  * Helper function for delete_node. Passes LexNode pointers-to-pointers so that
- * the actual tree can be recursively deleted.
+ * the actual tree can be recursively deleted. Edits the lex's wordcount.
  */ 
-void delete_node_helper(LexNode** nodeptr) {
+void delete_node_helper(CLexicon* lex, LexNode** nodeptr) {
     if(*nodeptr == NULL) return;
 
     for(int i = 0; i < ALPHA_SIZE; i++) {
-        delete_node_helper(&(*nodeptr)->children[i]);
+        delete_node_helper(lex, &(*nodeptr)->children[i]);
     }
+    if((*nodeptr)->is_word) lex->wordcount--;
     free(*nodeptr);
 }
 
@@ -70,13 +71,44 @@ void delete_node_helper(LexNode** nodeptr) {
  * ---------------------
  * Deletes a node and all of its children nodes and frees all memory associated with them.
  */ 
-void delete_node(LexNode* node) {
+void delete_node(CLexicon* lex, LexNode* node) {
     if(node == NULL) return;
 
     for(int i = 0; i < ALPHA_SIZE; i++) {
-        delete_node_helper(&node->children[i]);
+        delete_node_helper(lex, &node->children[i]);
     }
     free(node);
+}
+
+/* Function: clex_scrub_tree
+ * -------------------------
+ * Removes all nodes from the tree beginning at node that have no child nodes.
+ * Effectively "cleans up" parts of the tree that are no longer in use. Called during
+ * the remove function to ensure the contains_prefix functionality is as-intended.
+ */ 
+bool clex_scrub_tree(CLexicon* lex, LexNode** nodeptr) {
+    if(*nodeptr == NULL) return false;
+    bool has_children = false;
+
+    for(int i = 0; i < ALPHA_SIZE; i++) {
+        has_children = clex_scrub_tree(lex, &(*nodeptr)->children[i]);
+    }
+
+    if(has_children || (*nodeptr)->is_word) return true;
+    free(*nodeptr);
+    *nodeptr = NULL;
+    return false;
+}
+
+/* Function: to_lower_case
+ * -----------------------
+ * Changes all letters in the word at address pointed to by wordptr to lower-case.
+ */ 
+void to_lower_case(char word_lower[], int wordlen, char* word) {
+    for(int i = 0; i < wordlen; i++) {
+        word_lower[i] = tolower(word[i]);
+    }
+    word_lower[wordlen] = '\0';
 }
 
 /* Fuction: clex_simple_add
@@ -106,10 +138,7 @@ bool clex_contains_helper(CLexicon* lex, char* word, bool isPrefix) {
     //Creates a lower-case copy of the word.
     int wordlen = strlen(word);
     char word_lower[wordlen+1];
-    for(int i = 0; i < wordlen; i++) {
-        word_lower[i] = tolower(word[i]);
-    }
-    word_lower[wordlen] = '\0';
+    to_lower_case(word_lower, wordlen, word);
 
     //Traverses the tree from the root until it reaches the target node.
     LexNode* curr_node = lex->root;
@@ -136,7 +165,7 @@ bool clex_contains_helper(CLexicon* lex, char* word, bool isPrefix) {
  * a pointer to the CLexicon and should never need to interact with the actual struct.
  */
 CLexicon* clex_create() {
-    CLexicon* lex = malloc(sizeof(CLexicon*) + sizeof(CLexicon));
+    CLexicon* lex = malloc(sizeof(CLexicon));
     lex->root = create_node();
     lex->wordcount = 0;
     return lex;
@@ -147,7 +176,7 @@ CLexicon* clex_create() {
  * Frees all memory associated with a CLexicon*.
  */ 
 void clex_delete(CLexicon* lex) {
-   delete_node(lex->root);
+   delete_node(lex, lex->root);
    free(lex);
 }
 
@@ -156,15 +185,11 @@ void clex_delete(CLexicon* lex) {
  * Adds the given word to the CLexicon after converting it to lower case.
  */ 
 void clex_add(CLexicon* lex, char* word) {
-    //printf("adding word: %s\n", word);
-    int wordlen = strlen(word);
     //Creates a lower-case copy of the word.
+    int wordlen = strlen(word);
     char word_lower[wordlen+1];
-    for(int i = 0; i < wordlen; i++) {
-        word_lower[i] = tolower(word[i]);
-    }
-    word_lower[wordlen] = '\0';
-
+    to_lower_case(word_lower, wordlen, word);
+    
     //simple_add is a helper function that adds the word and increments the wordcount.
     clex_simple_add(lex, word_lower, wordlen);
 }
@@ -208,7 +233,7 @@ bool clex_add_from_file(CLexicon* lex, char* filename, bool is_lower_case) {
  * the word count to zero.
  */ 
 void clex_clear(CLexicon* lex) {
-    delete_node(lex->root);
+    delete_node(lex, lex->root);
     lex->root = create_node();
     lex->wordcount = 0;
 }
@@ -256,10 +281,7 @@ bool clex_remove(CLexicon* lex, char* word) {
     //Creates a lower-case copy of word.
     int wordlen = strlen(word);
     char word_lower[wordlen+1];
-    for(int i = 0; i < wordlen; i++) {
-        word_lower[i] = tolower(word[i]);
-    }
-    word_lower[wordlen] = '\0';
+    to_lower_case(word_lower, wordlen, word);
 
     //Iterates through the letters, descending down the tree to the penultimate letter.
     LexNode** curr_node = &lex->root;
@@ -279,6 +301,32 @@ bool clex_remove(CLexicon* lex, char* word) {
     }
     free(*word_node);
     *word_node = NULL;
+    clex_scrub_tree(lex, &lex->root);
+    return true;
+}
+
+/* Function: clex_remove_prefix
+ * ----------------------------
+ * Removes all words with the given prefix from the lexicon by traversing the tree to get to
+ * the prefix node (if it exists) and then recursively descending down each of its child trees,
+ * removing all nodes below it (uses the "delete_node_helper" method). Returns true if the
+ * prefix and its subtree has been removed, false if the tree never contained the prefix.
+ */
+bool clex_remove_prefix(CLexicon* lex, char* prefix) {
+    int preflen = strlen(prefix);
+    char pref_lower[preflen+1];
+    to_lower_case(pref_lower, preflen, prefix);
+
+    LexNode** curr_node = &lex->root;
+    for(int i = 0; i < preflen; i++) {
+        if(*curr_node == NULL) return false;
+        char ith = pref_lower[i];
+        curr_node = &((*curr_node)->children[ith - 'a']);
+    }
+    if(*curr_node == NULL) return false;
+    //Deletes the prefix node and its entire subtree.
+    delete_node_helper(lex, curr_node);
+    *curr_node = NULL;
     return true;
 }
 
