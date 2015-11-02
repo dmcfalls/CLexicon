@@ -1,7 +1,7 @@
 # CLexicon
 Author: Dan McFalls (dmcfalls@stanford.edu)
 
-Simple implementation of the lexicon data type in C.
+Implementation of the lexicon data type in C using a prefix-tree.
 
 Uses a tree structure in which each parent node has 26 children nodes, each representing a letter of the English alphabet.
 
