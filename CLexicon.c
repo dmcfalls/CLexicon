@@ -10,8 +10,7 @@
  * Modeled after the "Lexicon" class from the Stanford C++ Libraries.
  */
 
-#include "CLexicon.h"
-#include <stdbool.h>
+#include "CLexicon.h"   //includes <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,7 +20,7 @@
 #define MAX_WORD_LEN 45
 
 
-            /*** struct definitions ***/
+            /* * * Struct Definitions * * */
 
 
 struct LexNode {
@@ -35,7 +34,7 @@ struct CLexiconImplementation {
 };
 
 
-            /*** local helper functions ***/
+            /* * * Local Helper Functions * * */
 
 
 /* Function: create_node
@@ -65,6 +64,7 @@ void delete_node_helper(CLexicon* lex, LexNode** nodeptr) {
     }
     if((*nodeptr)->is_word) lex->wordcount--;
     free(*nodeptr);
+    *nodeptr = NULL;
 }
 
 /* Function: delete_node
@@ -78,31 +78,52 @@ void delete_node(CLexicon* lex, LexNode* node) {
         delete_node_helper(lex, &node->children[i]);
     }
     free(node);
+    node = NULL;
 }
 
-/* Function: clex_scrub_tree
- * -------------------------
- * Removes all nodes from the tree beginning at node that have no child nodes.
- * Effectively "cleans up" parts of the tree that are no longer in use. Called during
- * the remove function to ensure the contains_prefix functionality is as-intended.
+/* Function: branch_contains_words
+ * -------------------------------
+ * Returns true if node at nodeptr represents a word or if any of its children contain a branch with
+ * a node representing a word. Otherwise, returns false.
  */ 
-bool clex_scrub_tree(CLexicon* lex, LexNode** nodeptr) {
+bool branch_contains_words(CLexicon* lex, LexNode** nodeptr) {
     if(*nodeptr == NULL) return false;
-    bool has_children = false;
 
+    bool words_in_branch = false;
     for(int i = 0; i < ALPHA_SIZE; i++) {
-        has_children = clex_scrub_tree(lex, &(*nodeptr)->children[i]);
+        words_in_branch = words_in_branch || branch_contains_words(lex, &(*nodeptr)->children[i]);
     }
 
-    if(has_children || (*nodeptr)->is_word) return true;
-    free(*nodeptr);
-    *nodeptr = NULL;
+    if(words_in_branch || (*nodeptr)->is_word) return true;
     return false;
+}
+
+/* Function: clean_empty_branches
+ * ------------------------------
+ * Removes all nodes from the tree beginning at node that have no children representing words.
+ * Effectively "cleans up" branches of the tree that are no longer in use. Called during
+ * the remove function to ensure the contains_prefix functionality is as-intended.
+ */ 
+void scrub_empty_branches(CLexicon* lex, LexNode** nodeptr) {
+    //If the node at nodeptr is NULL, does nothing.
+    if(*nodeptr == NULL) return;
+
+    bool words_in_branch = branch_contains_words(lex, nodeptr);
+    //If there are words in this branch, go down a level and check for empty branches in children.
+    if((*nodeptr)->is_word || words_in_branch) {
+        for(int i = 0; i < ALPHA_SIZE; i++) {
+            scrub_empty_branches(lex, &(*nodeptr)->children[i]);
+        }
+    //Else, delete all of node's children and then delete node.
+    } else {
+        delete_node(lex, *nodeptr);
+        *nodeptr = NULL;
+    }
 }
 
 /* Function: to_lower_case
  * -----------------------
- * Writes the string word_lower to hold an all lower-case version of word with length wordlen.
+ * Creates a lower-case copy of word with length wordlen and stores it in word_lower.
  */ 
 void to_lower_case(char word_lower[], int wordlen, char* word) {
     for(int i = 0; i < wordlen; i++) {
@@ -156,7 +177,7 @@ bool clex_contains_helper(CLexicon* lex, char* word, bool isPrefix) {
 }
 
 
-            /*** client functions listed in the header file ***/
+            /* * * Client Functions Listed in the Header File * * */
 
 
 /* Function: clex_create
@@ -295,13 +316,14 @@ bool clex_remove(CLexicon* lex, char* word) {
     (*word_node)->is_word = false;
     lex->wordcount--;
 
-    //Checks to see if word_node has children. If not, deletes the node and points curr_node to NULL.
+    //Checks to see if word_node has children. If not, deletes the node and points word_node to NULL.
     for(int i = 0; i < ALPHA_SIZE; i++) {
         if((*word_node)->children[i] != NULL) return true;
     }
     free(*word_node);
     *word_node = NULL;
-    clex_scrub_tree(lex, &lex->root);
+    //Ensures that prefix functionality is maintained correctly by removing unused branches from tree.
+    scrub_empty_branches(lex, &lex->root);
     return true;
 }
 

@@ -4,9 +4,8 @@
  * Simple client program for testing the features of CLexicon.
  */ 
 
+#include <stdio.h>
 #include "CLexicon.h"
-#include "CLexicon.c"
-#include <stdbool.h>
 
 void simple_test() {
     printf("---------- Running Simple Test ----------\n");
