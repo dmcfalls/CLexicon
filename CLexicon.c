@@ -42,11 +42,14 @@ struct CLexiconImplementation {
  * Creates a new LexNode, initializes all of its children pointers to NULL,
  * and sets its word status to false. Returns a pointer.
  */ 
-LexNode* create_node() {
+static inline LexNode* create_node() {
     LexNode* node  = malloc(sizeof(LexNode));
-    for(int i = 0; i < ALPHA_SIZE; i++) {
-        node->children[i] = NULL;
+    //Loop overhead amortization to improve efficiency; create_node is called very often.
+    for(int i = 0; i < ALPHA_SIZE - 2; i+= 4) {
+        node->children[i] = NULL; node->children[i+1] = NULL; node->children[i+2] = NULL; node->children[i+3] = NULL;
     }
+    //Finishes the loop's job of initializing the node's child nodes.
+    node->children[ALPHA_SIZE - 2] = NULL; node->children[ALPHA_SIZE - 1] = NULL;
     node->is_word = false;
     return node;
 }
@@ -56,11 +59,12 @@ LexNode* create_node() {
  * Helper function for delete_node. Passes LexNode pointers-to-pointers so that
  * the actual tree can be recursively deleted. Edits the lex's wordcount.
  */ 
-void delete_node_helper(CLexicon* lex, LexNode** nodeptr) {
+static void delete_node_helper(CLexicon* lex, LexNode** nodeptr) {
     if(*nodeptr == NULL) return;
 
-    for(int i = 0; i < ALPHA_SIZE; i++) {
-        delete_node_helper(lex, &(*nodeptr)->children[i]);
+    //Loop overhead amortization to improve efficiency; delete_node_helper is called very often.
+    for(int i = 0; i < ALPHA_SIZE; i+= 2) {
+        delete_node_helper(lex, &(*nodeptr)->children[i]);   delete_node_helper(lex, &(*nodeptr)->children[i+1]);
     }
     if((*nodeptr)->is_word) lex->wordcount--;
     free(*nodeptr);
@@ -71,7 +75,7 @@ void delete_node_helper(CLexicon* lex, LexNode** nodeptr) {
  * ---------------------
  * Deletes a node and all of its children nodes and frees all memory associated with them.
  */ 
-void delete_node(CLexicon* lex, LexNode* node) {
+static inline void delete_node(CLexicon* lex, LexNode* node) {
     if(node == NULL) return;
 
     for(int i = 0; i < ALPHA_SIZE; i++) {
@@ -86,7 +90,7 @@ void delete_node(CLexicon* lex, LexNode* node) {
  * Returns true if node at nodeptr represents a word or if any of its children contain a branch with
  * a node representing a word. Otherwise, returns false.
  */ 
-bool branch_contains_words(CLexicon* lex, LexNode** nodeptr) {
+static bool branch_contains_words(CLexicon* lex, LexNode** nodeptr) {
     if(*nodeptr == NULL) return false;
 
     bool words_in_branch = false;
@@ -94,8 +98,7 @@ bool branch_contains_words(CLexicon* lex, LexNode** nodeptr) {
         words_in_branch = words_in_branch || branch_contains_words(lex, &(*nodeptr)->children[i]);
     }
 
-    if(words_in_branch || (*nodeptr)->is_word) return true;
-    return false;
+    return words_in_branch || (*nodeptr)->is_word;
 }
 
 /* Function: clean_empty_branches
@@ -104,7 +107,7 @@ bool branch_contains_words(CLexicon* lex, LexNode** nodeptr) {
  * Effectively "cleans up" branches of the tree that are no longer in use. Called during
  * the remove function to ensure the contains_prefix functionality is as-intended.
  */ 
-void scrub_empty_branches(CLexicon* lex, LexNode** nodeptr) {
+static void scrub_empty_branches(CLexicon* lex, LexNode** nodeptr) {
     //If the node at nodeptr is NULL, does nothing.
     if(*nodeptr == NULL) return;
 
@@ -125,7 +128,7 @@ void scrub_empty_branches(CLexicon* lex, LexNode** nodeptr) {
  * -----------------------
  * Creates a lower-case copy of word with length wordlen and stores it in word_lower.
  */ 
-void to_lower_case(char word_lower[], int wordlen, char* word) {
+static inline void to_lower_case(char word_lower[], int wordlen, char* word) {
     for(int i = 0; i < wordlen; i++) {
         word_lower[i] = tolower(word[i]);
     }
@@ -139,7 +142,7 @@ void to_lower_case(char word_lower[], int wordlen, char* word) {
  * in the header file and considered available for client use. Remains hidden now for the
  * sake of simplicity of presentation.
  */ 
-void clex_simple_add(CLexicon* lex, char* word_lower, int wordlen) {
+static inline void clex_simple_add(CLexicon* lex, char* word_lower, int wordlen) {
     //For every character in the word, accesses (or creates) subnodes.
     LexNode* last_node = lex->root;
     for(int i = 0; i < wordlen; i++) {
@@ -155,7 +158,11 @@ void clex_simple_add(CLexicon* lex, char* word_lower, int wordlen) {
     lex->wordcount++;
 }
 
-bool clex_contains_helper(CLexicon* lex, char* word, bool isPrefix) {
+/* Function: clex_contains_helper
+ * ------------------------------
+ * Helper method for contains that takes as an argument whether to search for prefix or word.
+ */ 
+static inline bool clex_contains_helper(CLexicon* lex, char* word, bool isPrefix) {
     //Creates a lower-case copy of the word.
     int wordlen = strlen(word);
     char word_lower[wordlen+1];
@@ -172,8 +179,7 @@ bool clex_contains_helper(CLexicon* lex, char* word, bool isPrefix) {
     if(curr_node == NULL) return false;
 
     //Returns true if searching for a prefix, otherwise returns the node's is_word field.
-    if(isPrefix) return true;
-    return curr_node->is_word;
+    return isPrefix || curr_node->is_word;
 }
 
 

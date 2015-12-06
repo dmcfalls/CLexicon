@@ -11,10 +11,10 @@ CC = gcc
 
 # The CFLAGS variable sets the flags for the compiler.
 #  -g          compile with debug information
-#  -O2         use standard O2 optimizations
+#  -Ofast      optimize for speed
 #  -std=gnu99  use the C99 standard language definition with GNU extensions
 #  -Wall       turn on optional warnings (warnflags configures specific diagnostic warnings)
-CFLAGS = -g -O2 -std=gnu99 -Wall $$warnflags -fno-omit-frame-pointer -fno-stack-protector
+CFLAGS = -g -Ofast -std=gnu99 -Wall $$warnflags -fno-omit-frame-pointer -fno-stack-protector
 export warnflags = -Wfloat-equal -Wtype-limits -Wpointer-arith -Wlogical-op -Wshadow -fno-diagnostics-show-option
 
 # The LDFLAGS variable sets flags for the linker and the LDLIBS variable lists
@@ -23,7 +23,7 @@ LDFLAGS =
 LDLIBS = 
 
 # Configure build tools to emit code for IA32 architecture by adding the necessary
-# flag to compiler and linker
+# flag to compiler and linker (built on IA32 machine)
 CFLAGS += -m32
 LDFLAGS += -m32
 
