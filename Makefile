@@ -27,11 +27,14 @@ LDLIBS =
 CFLAGS += -m32
 LDFLAGS += -m32
 
+# defines the default build targets
+all:: lextest tolkien
+
 # lextest is built by compiling lextest and linking with CLexicon.o
 lextest: lextest.o CLexicon.o
 	$(LINK.o) $^ $(LDLIBS) -o $@
 
-# tolkien is built similarly
+# tolkien is built similarly (another test program; build in progress)
 tolkien: tolkien.o CLexicon.o
 	$(LINK.o) $^ $(LDLIBS) -o $@
 
@@ -50,7 +53,7 @@ tolkien: tolkien.o CLexicon.o
 
 # The line below defines the clean target to remove any previous build results
 clean::
-	rm -f $(PROGRAMS) $(SOLN_PROGRAMS) core *.o
+	rm -f lextest tolkien core *.o
 
 # PHONY is used to mark targets that don't represent actual files/build products
 .PHONY: clean all soln
