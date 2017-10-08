@@ -22,20 +22,11 @@ export warnflags = -Wfloat-equal -Wtype-limits -Wpointer-arith -Wlogical-op -Wsh
 LDFLAGS = 
 LDLIBS = 
 
-# Configure build tools to emit code for IA32 architecture by adding the necessary
-# flag to compiler and linker (built on IA32 machine)
-CFLAGS += -m32
-LDFLAGS += -m32
-
 # defines the default build targets
-all:: lextest tolkien
+all:: lextest
 
 # lextest is built by compiling lextest and linking with CLexicon.o
 lextest: lextest.o CLexicon.o
-	$(LINK.o) $^ $(LDLIBS) -o $@
-
-# tolkien is built similarly (another test program; build in progress)
-tolkien: tolkien.o CLexicon.o
 	$(LINK.o) $^ $(LDLIBS) -o $@
 
 # The entry below is a pattern rule. It defines the general recipe to make
@@ -53,7 +44,7 @@ tolkien: tolkien.o CLexicon.o
 
 # The line below defines the clean target to remove any previous build results
 clean::
-	rm -f lextest tolkien core *.o
+	rm -f lextest core *.o
 
 # PHONY is used to mark targets that don't represent actual files/build products
 .PHONY: clean all soln
